@@ -17,8 +17,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,12 +40,14 @@ public class Recognition extends Service implements android.speech.RecognitionLi
     //============================================================
     public void startRecognising()
     {
+        //This is called only first time. Initializes SpeechRecognizer.
         if(speech == null) {
             speech = SpeechRecognizer.createSpeechRecognizer(this);
             speech.setRecognitionListener(this);
             sendNotification("Service running", true, 1);
         }
 
+        //Recognizer parameters
         intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
@@ -55,13 +55,17 @@ public class Recognition extends Service implements android.speech.RecognitionLi
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100);
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, this.getPackageName());
+
+        //Starts listening
         speech.startListening(intent);
     }
 
     //============================================================
     //                    Finish recognition
     //============================================================
-    public void finishRecognition(){
+    public void finishRecognising(){
+
+        //Cancel persistent notification (running service), stop recording and send broadcast to stop service
         if(speech != null)
         {
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -72,17 +76,16 @@ public class Recognition extends Service implements android.speech.RecognitionLi
         }
     }
 
+    //Send broadcast to MainActivity in order to stop service
     private void updateUI() {
-        Log.d("sender", "Broadcasting message");
-        Intent intent = new Intent("custom-event-name");
-        // You can also include some extra data.
-        intent.putExtra("message", "This is my message!");
+        Intent intent = new Intent("RecognitionServiceErrorNotifier");
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    //============================================================
-    //    Recognition system methods: Only last two are used
-    //============================================================
+
+    //==============================================================================
+    //    Recognition system methods: Only last two are used but all are necessary
+    //==============================================================================
     public void onBeginningOfSpeech() {
         // TODO Auto-generated method stub
         //Log.i(TAG, "onbeginningofspeech");
@@ -111,39 +114,55 @@ public class Recognition extends Service implements android.speech.RecognitionLi
         // TODO Auto-generated method stub
         //Log.i(TAG, "onrmschanged");
     }
-    public void onResults(Bundle arg0) {
-        // TODO Auto-generated method stub
-        //Log.i(TAG, "onresults");
-        ArrayList<String> matches = arg0.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        List<Integer> coordinates = instanceDisplay.getCoordinates();
 
+    //Called everytime a word or sentence is recognized
+    public void onResults(Bundle arg0) {
+
+        //Get results
+        ArrayList<String> matches = arg0.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+
+        //Check if any result matches known commands
         for (String string : matches){
+
+            //Next page command
             if (string.equalsIgnoreCase(Commands.PÁGINA_SIGUIENTE)){
+
+                List<Integer> coordinates = instanceDisplay.getCoordinates();
                 Log.d("log", "Received: " + string);
                 Commands.performClick(coordinates.get(2), coordinates.get(3));
                 break;
             }
+
+            //Previous page command
             else if(string.equalsIgnoreCase(Commands.PÁGINA_ANTERIOR)){
+
+                List<Integer> coordinates = instanceDisplay.getCoordinates();
                 Log.d("log", "Received: " + string);
                 Commands.performClick(coordinates.get(0), coordinates.get(1));
                 break;
             }
+
             Log.d("log", "Received: " + string);
         }
+
+        //After performing task, start again
         startRecognising();
     }
 
     public void onError(int errorCode) {
-        // TODO Auto-generated method stub
-        if ((errorCode == SpeechRecognizer.ERROR_NO_MATCH) || (errorCode == SpeechRecognizer.ERROR_SPEECH_TIMEOUT))
+
+        //This is not an error per-se. The way this app works allows this.
+        if ((errorCode == SpeechRecognizer.ERROR_NO_MATCH))
         {
             Log.d("log", "Nothing recognized");
             startRecognising();
         }
+
+        //On problematic error, stop service and notify user
         else{
             Log.d("log", "Error: " + errorCode);
             sendNotification("Error: " + errorCode, false, 0);
-            finishRecognition();
+            finishRecognising();
         }
     }
 
@@ -151,8 +170,6 @@ public class Recognition extends Service implements android.speech.RecognitionLi
     //===============================================================================
     // This following methods handle the background service called from MainActivity
     //===============================================================================
-
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -167,7 +184,7 @@ public class Recognition extends Service implements android.speech.RecognitionLi
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Let it continue running until it is stopped.
+
         startRecognising();
         instanceDisplay = DisplayClass.getInstance();
         Log.d("log", "Service Started");
@@ -179,12 +196,10 @@ public class Recognition extends Service implements android.speech.RecognitionLi
         super.onDestroy();
         // TODO Auto-generated method stub
         try {
-            finishRecognition();
+            finishRecognising();
             Log.d("log", "Service Finished");
         }catch (Exception ex){}
     }
-
-
 
 
     //Need to detect screen rotation to update coordinates properly

@@ -58,12 +58,12 @@ public class DisplayClass {
         int height = display.getHeight();
 
         //Get Back coordinates
-        xBack = width / 6;      //Any value lower than width / 3 should be valid
-        yBack = height / 2;     // It doesn't matter. Half height is OK
+        xBack = width / 6;              //Any value lower than width / 3 should be valid
+        yBack = height / 2;             // It doesn't matter. Half height is OK
 
         //Get next coordinates
-        xNext = width - (width / 6);      //Any value lower than width / 3 should be valid
-        yNext = height / 2;     // It doesn't matter. Half height is OK
+        xNext = width - (width / 6);    //Any value lower than width / 3 should be valid
+        yNext = height / 2;             // It doesn't matter. Half height is OK
     }
 
 

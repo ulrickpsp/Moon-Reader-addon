@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
+import android.media.Image;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Looper;
@@ -39,13 +40,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //Register UI Components
         bStart = (Button) findViewById(R.id.b_start);
-        bStart.setOnClickListener(this);
-
         bStop = (Button) findViewById(R.id.b_stop);
-        bStop.setOnClickListener(this);
-
         image = (ImageView) findViewById(R.id.imageView2);
+
+        //Set Click Listeners
+        bStart.setOnClickListener(this);
+        bStop.setOnClickListener(this);
 
         //Needed to detect properly the coordinates
         DisplayClass.setAutoRotation(this);
@@ -54,23 +56,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         DisplayClass instance = DisplayClass.getInstance();
         instance.updateCoordinates(this);
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("custom-event-name"));
-        super.onResume();
-
+        //Suscribe to Recognition Service Error notifier
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("RecognitionServiceErrorNotifier"));
     }
 
+
+    //=======================================================================================
+    //             This code gets executed when user clicks one of the buttons
+    //=======================================================================================
     @Override
     public void onClick(View v) {
+
+        //Button start
         if(v.getId() == R.id.b_start){
+
+            //Check API. If > Marshmallow, request extra permissions. Result goes to onRequestPermissionsResult
             if(android.os.Build.VERSION.SDK_INT == 23) {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO}, 1);
             }
+
+            //If < Marshmallow, start service directly
             else
             {
                 startService(new Intent(this, Recognition.class));
                 image.setImageDrawable(getResources().getDrawable(R.drawable.buttongreen));
             }
         }
+
+        //Button stop
         else{
             stopService(new Intent(this, Recognition.class));
             image.setImageDrawable(getResources().getDrawable(R.drawable.buttonred));
@@ -83,28 +96,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case 1: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    //If permission is granted, start service
                     startService(new Intent(this, Recognition.class));
                     image.setImageDrawable(getResources().getDrawable(R.drawable.buttongreen));
+
                 } else {
                     Toast.makeText(MainActivity.this, "Permission deny to record audio", Toast.LENGTH_SHORT).show();
                 }
                 return;
             }
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 
+    //=======================================================================================
+    //     This code gets executed every time that an error occurs in Reconition Service
+    //=======================================================================================
     private BroadcastReceiver mMessageReceiver= new BroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            // intent can contain anydata
-            Log.d("sohail","onReceive called");
+
+            //When error occurs, stop RecognitionService and update UI accordingly
             image.setImageDrawable(getResources().getDrawable(R.drawable.buttonred));
             stopService(new Intent(getApplicationContext(), Recognition.class));
         }
     };
+
+
+
+
+
 }
 
 

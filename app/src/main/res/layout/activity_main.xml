@@ -5,7 +5,8 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:weightSum="10">
+    android:weightSum="10"
+    android:background="#2f3fb9">
 
 
 
@@ -34,7 +35,9 @@
             android:text="Moon+ Reader Voice Control"
             android:id="@+id/textView"
             android:layout_gravity="center"
-            android:layout_marginTop="40dp" />
+            android:layout_marginTop="40dp"
+            android:textColor="#ffffff"
+            android:textStyle="bold" />
 
         <ImageView
             android:layout_width="100dp"
